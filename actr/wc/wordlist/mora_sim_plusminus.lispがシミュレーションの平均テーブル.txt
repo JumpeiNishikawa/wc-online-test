@@ -1,0 +1,2 @@
+mora_sim_plusminus.lispがシミュレーションの平均テーブルのファイル
+mora_sim.lispがシミュレーションの結合テーブルのファイル

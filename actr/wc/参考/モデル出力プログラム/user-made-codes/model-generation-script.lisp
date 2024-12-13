@@ -1,0 +1,8 @@
+(use-package :the-game.model-generation)
+(dotimes (i 2)
+  (setf *model-num* (1+ i))
+  (dolist (what-to-remember '(:as-is :cumulative))
+    (dolist (search-method '(:complete :outcome-weight-large :outcome-weight-small))
+      (dolist (how-to-use-cases '(:case-base :imitation))
+        (with-open-file (str (format nil "./generated-models/~a+~a+~a-~a.lisp" what-to-remember search-method how-to-use-cases *model-num*) :direction :output :if-exists :supersede)
+          (princ (output (make-the-game-model what-to-remember search-method how-to-use-cases)) str))))))

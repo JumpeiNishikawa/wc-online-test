@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8">
+    <title>actr-shiritori-chat</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <!-- C01. Socket.IOクライアントライブラリの読込み -->
+    <script src="socket.io/socket.io.js"></script>
+    <style type='text/css'>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            background: white;
+            color: #000;
+        }
+
+        a {
+            text-decoration: underline;
+        }
+
+        input[type=radio] {
+            display: none;
+            /* ラジオボタンを非表示にする */
+        }
+
+        /*モデル名決めうちしている，いずれ，ACT-Rプロセスから取得するか，サーバで対応を管理するようにしたい*/
+        /*選択されたときの色*/
+        /*吹き出しの中身*/
+        input[type="radio"]:checked+label#red_answer_label {
+            background: red;
+            color: #ffffff;
+        }
+
+        input[type="radio"]:checked+label#blue_answer_label {
+            background: blue;
+            color: #ffffff;
+        }
+
+        input[type="radio"]:checked+label#green_answer_label {
+            background: green;
+            color: #ffffff;
+        }
+
+        input[type="radio"]:checked+label#black_answer_label {
+            background: black;
+            color: #ffffff;
+        }
+
+        /*三角部分*/
+        input[type="radio"]:checked+.answer_contents#red_answer_contents:after {
+            border-right: 12px solid red;
+        }
+
+        input[type="radio"]:checked+.answer_contents#blue_answer_contents:after {
+            border-right: 12px solid blue;
+        }
+
+        input[type="radio"]:checked+.answer_contents#green_answer_contents:after {
+            border-right: 12px solid green;
+        }
+
+        input[type="radio"]:checked+.answer_contents#black_answer_contents:after {
+            border-right: 12px solid black;
+        }
+
+        /*ホバー時の吹き出しの中の色*/
+        .label#red_answer_label:hover {
+            background: hotpink;
+            color: #ffffff
+        }
+
+        .label#blue_answer_label:hover {
+            background: skyblue;
+            color: #ffffff
+        }
+
+        .label#green_answer_label:hover {
+            background: yellowgreen;
+            color: #ffffff
+        }
+
+        .label#black_answer_label:hover {
+            background: gray;
+            color: #ffffff
+        }
+
+        /*ロボットアイコンの周りの円の色*/
+        .balloon .faceicon#red_faceicon img {
+            border: solid 3px #ff69b4;
+        }
+
+        .balloon .faceicon#blue_faceicon img {
+            border: solid 3px skyblue;
+        }
+
+        .balloon .faceicon#green_faceicon img {
+            border: solid 3px yellowgreen;
+        }
+
+        .balloon .faceicon#black_faceicon img {
+            border: solid 3px gray;
+        }
+
+        /*吹き出しの色，未選択時*/
+        .answer_contents#red_answer_contents {
+            background: lightpink;
+        }
+
+        .answer_contents#blue_answer_contents {
+            background: lightblue;
+        }
+
+        .answer_contents#green_answer_contents {
+            background: lightgreen;
+        }
+
+        .answer_contents#black_answer_contents {
+            background: lightgray;
+        }
+
+        /*吹き出し三角部分の色*/
+        .answer_contents#red_answer_contents:after {
+            border-right: 12px solid lightpink;
+        }
+
+        .answer_contents#blue_answer_contents:after {
+            border-right: 12px solid lightblue;
+        }
+
+        .answer_contents#green_answer_contents:after {
+            border-right: 12px solid lightgreen;
+        }
+
+        .answer_contents#black_answer_contents:after {
+            border-right: 12px solid lightgray;
+        }
+
+        /*選択肢が使えないときカーソルが無許可表示*/
+        input[type="radio"]:disabled+label#red_answer_label {
+            cursor: not-allowed;
+        }
+
+        input[type="radio"]:disabled+label#blue_answer_label {
+            cursor: not-allowed;
+        }
+
+        input[type="radio"]:disabled+label#green_answer_label {
+            cursor: not-allowed;
+        }
+
+        input[type="radio"]:disabled+label#black_answer_label {
+            cursor: not-allowed;
+        }
+
+        /*いつも共通，あるいはモデルが割り当てられていないとき*/
+        .label:hover {
+            background-color: lightblue;
+            /* マウスオーバー時の背景色を指定する */
+        }
+
+        .label {
+            display: block;
+            /* ブロックレベル要素化する */
+            float: left;
+            /* 要素の左寄せ・回り込を指定する */
+            margin: 5px;
+            /* ボックス外側の余白を指定する */
+            /*width: 100px;     /* ボックスの横幅を指定する */
+            height: 45px;
+            /* ボックスの高さを指定する */
+            padding-left: 5px;
+            /* ボックス内左側の余白を指定する */
+            padding-right: 5px;
+            /* ボックス内御右側の余白を指定する */
+            color: #b20000;
+            /* フォントの色を指定 */
+            text-align: center;
+            /* テキストのセンタリングを指定する */
+            line-height: 45px;
+            /* 行の高さを指定する */
+            cursor: pointer;
+            /* マウスカーソルの形（リンクカーソル）を指定する */
+            border-radius: 5px;
+            /* 角丸を指定する */
+        }
+
+        .balloon {
+            /*ここで選択肢を並べる．answersの子要素*/
+            display: inline-block;
+            width: 180px;
+            margin: 5px;
+            margin-right: 30px;
+            margin-top: 200px; /*2択の設定上にマージン伸ばして中央っぽく見せる・4択の時は100*/
+            overflow: hidden;
+            padding: 5px;
+        }
+
+        .balloon .faceicon {
+            float: left;
+            margin-right: -90px;
+
+            width: 80px;
+        }
+
+        .balloon .faceicon img {
+            width: 100%;
+            height: auto;
+            border: solid 3px #d7ebfe;
+            border-radius: 50%;
+        }
+
+        .balloon .answer_candidate {
+            width: 100%;
+        }
+
+        .answers {
+            width: 500px;
+            height: 500px;
+            background-color: lightgoldenrodyellow;
+            border-radius: 50%;
+            text-align: center;
+            vertical-align: middle;
+            /* テキストのセンタリングを指定する */
+        }
+
+        .answer_contents {
+            display: inline-block;
+            position: relative;
+            margin: 5px 0 0 105px;
+            padding: 0 0;
+            border-radius: 12px;
+            background: #E2EDF9;
+        }
+
+        .answer_contents:after {
+            content: "";
+            display: inline-block;
+            position: absolute;
+            top: 18px;
+            left: -24px;
+            border: 12px solid transparent;
+            border-right: 12px solid #d7ebfe;
+        }
+
+        /*回答履歴の表示*/
+        .box {
+            width: 200px;
+            /* 横幅を200pxに指定 */
+            height: 200px;
+            /* 横幅を200pxに指定 */
+            border: 1px solid #000;
+            /* わかりやすくボーダーを引く */
+            overflow-y: scroll;
+            /* 縦方向にスクロール可能にする */
+            resize: both;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div id="title_area">
+            <h1>しりとり課題実験</h1>
+            <form id="nameInput" class="form-inline">
+                <div id="msgDiv" class="form-group">
+                    <label class="nameLabel" for="msgForm">名前：</label>
+                    <input type="text" class="form-control" id="msgForm">
+                </div>
+                <button type="submit" class="btn btn-primary" id="sendButton">入室</button>
+            </form>
+        </div>
+        <div id='quiz_area'>
+            <div id='question'>
+                <!--
+                <button name='start_button' id='start_button' type='button' onclick='my_start()' disabled>START</button>
+                -->
+                <br>
+            </div>
+            <div id='answers' class="answers">
+                <form id='answer_radios'>
+                </form>
+            </div>
+            <div id='results'>
+            </div>
+        </div>
+
+        <!--
+          <h3>履歴</h3>
+          <div class="box" id="shiritoriLogs">
+          </div>
+        -->
+    </div>
+
+    <script type="text/javascript">
+        var socket = io({ path: '/node2/wc-online-test/socket.io', transports: ['websocket'] })//io.connect(); // C02. ソケットへの接続
+        var isEnter = false;
+
+        //こういう管理方法でいいのか？バッティングしない？
+        var THIS_NAME = '';
+        //var THIS_ROOM = '';
+
+        var models = {};
+        var Disable_models = new Set();
+
+        var model_color = { "MP10-SIM1": "赤", "MP30-SIM1": "青", "MP10-SIM2": "緑", "MP30-SIM2": "黒" };//デフォ値，ランダムかしたのでこのまま表示はできない
+
+        //今回の実験(2021/01)ではモデルの入れ替えは行わないので4
+        const model_num = 2;//4;
+
+
+        // クエリパラメータで時間を指定できるようにする．
+        // URLからクエリパラメータを取得
+        function getQueryParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+        // クエリパラメータの値を取得
+        const paramValue = getQueryParam('exptime');
+        console.log("exptime is set", paramValue)
+
+        //今回の実験(2021/01)では時間をはかる．30分に延長2023/05/01
+        const exp_time = paramValue * 60 * 1000 //sec
+        var start_time = new Date().getTime();
+        var end_time = new Date().getTime();
+
+        const num_questions = 3;
+        var question_counter = 1;
+        const num_rounds = 3;
+        var rounds_counter = 1;
+
+        var assign_counter = 0;
+
+        // C04. server_to_clientイベント・データを受信する
+        socket.on('enable_send_button', () => {
+            console.log('enable_send_button')
+            $("#start_button").text("スタート");
+            $("#start_button").prop("disabled", false);
+            //$("#msgForm").prop("pattern", "(?=.*?[\u3041-\u309F])[\u3041-\u309F\s]*");
+            //$("#msgForm").prop("title", "ひらがなで入力*");
+        })
+        //socket.on('open', function () {
+        //    //'open' => バーチャルディスプレイがモデルにインストールされた => モデルはロード済みのはず => スタートボタンを有効に
+        //    document.getElementById('start_button').disabled = false;
+        //    start_disable = false;
+        //    console.log('stard_disable: ' + start_enable);
+        //    //redisplay();
+        //});
+
+
+        socket.on('notification_room', (data) => {
+            console.log('notification_room: ' + data.room);
+        })
+        socket.on("server_to_client", function (data) {
+            //appendMsg(data.value) //チャット形式だった頃の名残
+            console.log("server_to_client message:", data.value)
+        });
+        //function appendMsg(text) {
+        //    $("#chatLogs").append("<div>" + text + "</div>");
+        //}
+        socket.on("check_git_branch", (data) => {
+            //このイベントはサーバ側で判定，ブランチが実験用のものと違う時だけ送られる．
+            let gitBranch = data.value;
+            console.log(gitBranch);
+            let title_element = document.getElementById("title_area");
+            let insertHTML = `<h1>[ここは ${gitBranch}ブランチ]</h1>`;
+
+            title_element.insertAdjacentHTML("afterbegin", insertHTML);
+        })
+
+        $("form").submit(function (e) {
+            var message = $("#msgForm").val();
+            $("#msgForm").val('');
+
+            THIS_NAME = message;
+            var entryMessage = THIS_NAME + "さんが入室しました。";
+            console.log(entryMessage);
+            socket.emit("client_to_server_join", { name: THIS_NAME });
+            //socket.emit("client_to_server_join", {name : name});
+            // C05. client_to_server_broadcastイベント・データを送信する
+            socket.emit("client_to_server_broadcast", { value: entryMessage });
+            // C06. client_to_server_personalイベント・データを送信する
+            socket.emit("client_to_server_personal", { value: THIS_NAME });
+            deleteFormAndAddAnswerBtn(THIS_NAME);
+
+            e.preventDefault();
+        });
+
+        function deleteFormAndAddAnswerBtn(name) {
+            $('#nameInput').remove()
+            $('#title_area').append(`<p>${name}さんが実験中．<br><span style="color:red">リロードしない</span>でください．最初からになってしまいます．トラブルの場合はこのタブはそのままにして発注者にご連絡ください．</p>`)
+            $('#question').append(`<button class='btn btn-primary' name='start_button' id='start_button' type='button' onclick='my_start()' disabled>START</button>`)
+
+            $("#start_button").text("読込中");
+            $("#start_button").prop("disabled", true);
+            isEnter = true;
+        }
+
+        socket.on('add', function (msg) {
+            //items[msg[0]] = msg;
+            //redisplay();
+            //今の所受け取るのはこの二種のみのはず，ACT-R側を解析してtextメッセージもオーバーライトしたい
+            console.log(msg)
+
+            switch (msg[1]) {
+                case 'question':
+                    quiz_disp(msg[4]);
+                    if (question_counter == 1 && rounds_counter == 1) {
+                        console.log("candidate_init");
+                        candidate_init(msg[4], msg[7]);//msg[4]=first_word, msg[7]=model_order
+                    }
+                    break;
+                case 'text':
+                    //新規のモデルなら辞書に追加
+                    if (msg[7] in models) {
+                        console.log(models)
+                    } else {
+                        models[msg[7]] = 0; //いつかはこの辞書をクリアする必要があるはず
+                        console.log('Append ' + msg[7] + ' to ' + models);
+                        //モデルが規定数以上なら非表示リストに追加
+                        if (Object.keys(models).length > model_num) {
+                            Disable_models.add(msg[7]);
+                            console.log(msg[7] + ' is now disabled. models length = ' + Object.keys(models).length);
+                        }
+                    }
+                    //非表示リストにないモデルなら表示
+                    if (!Disable_models.has(msg[7])) {
+                        //word_disp(msg[4], msg[7]); //(word, model)
+                        assign_candidate(msg[4], msg[7]);
+                    }
+                    break;
+            }
+        });
+
+        //attend, remove, clear, onmousedownm onkeypressの送信機能を削除，必要ならwc_systemを参照
+        socket.on('spokenWord', function (data) {
+            console.log('spokenWord:' + data[0]);
+            let word = new Audio(data[0]);
+            word.play();
+        });
+
+        function my_start() {
+            start_time = new Date().getTime();
+            end_time = new Date().getTime();
+            console.log('START at: ' + start_time);
+            //ここちゃんとroomに送る
+            socket.emit('game_start', { name: THIS_NAME });
+        }
+
+        function candidate_init(first_word, model_color_order) {
+            model_color = model_color_order;
+            //これ以前のバージョンでは1〜4の数字を仮に定義し，assign_candidateの初処理で割当てていた
+            //このバージョンからは，model_orderを受け取り最初に順番を定義する
+            console.log(`Initialize answer candidate with model and color order: ↓`);
+            console.log(model_color_order)
+            let keys = Object.keys(model_color_order); // = models , model_color_order[keys[i]]とすると色
+            console.log(keys);
+
+            let ans_element = document.getElementById('answer_radios');
+            //色の指定に関わるのは_answer_contents, _answer_label, _faceicon
+            for (let i = 0; i < model_num; i++) {
+                let insertHTML = `
+                    <div class="balloon">
+                        <div class="faceicon" id='${model_color_order[keys[i]]}_faceicon'>
+                            <img src='/node2/wc-online-test/img/1.png' width='100' height='100'>
+                        </div>
+                        <div class="answer_candidate">
+                            <div class="answer_contents" id='${model_color_order[keys[i]]}_answer_contents'>
+                                <input type='radio' id='${keys[i]}_answer' class='model_answer' name='model_answer' value='word${i},model${i}' disabled/> 
+                                <label for='${keys[i]}_answer' id='${model_color_order[keys[i]]}_answer_label' class='label' style="display:block;">考え中</label>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                ans_element.insertAdjacentHTML('beforeend', insertHTML)
+            }
+
+            //回答履歴の処理，いまはなし
+            //let newEl = document.createElement('div');
+            //newEl.textContent = first_word;//今は決め打ち
+            //document.getElementById("shiritoriLogs").append(newEl)
+        }
+
+        function quiz_disp(word) {
+            document.getElementById('question').innerHTML = '';
+
+            let quiz_element = document.getElementById('question');
+            let insertHTML = `<h2>問題「・・・」<img src='/node2/wc-online-test/img/speaker.png' id=quiz_${word} width='30' height='30' onclick='utter_word("${word}")'></h2>`;
+            quiz_element.insertAdjacentHTML('beforeend', insertHTML)
+
+            utter_word(word);
+            add_answer_button();
+        }
+
+        function add_answer_button() {
+            //<button name='start_button' id='start_button' type='button' onclick='my_start()' disabled=>START</button>
+            //回答ボタンを表示するタイミングや使用可能にするタイミングは調整が必要，全てのモデルが回答したら選択可能に，answersセクションに表示したい
+            let quiz_element = document.getElementById('question');
+            let insertHTML = `<button class='btn btn-primary' name='answer_button' id='answer_button' type='button' disabled>答える</button>`;
+
+            quiz_element.insertAdjacentHTML('beforeend', insertHTML)
+        }
+        function choose_answer(answer_model, candidates) {
+            let chosen_answer = answer_model.split(',')[0];
+            let chosen_model = answer_model.split(',')[1];
+            console.log('answered:' + chosen_answer + ', model: ' + chosen_model);
+
+            models[chosen_model] += 1;
+
+            //count_results();
+            //answers_count_disp();//経過時間の表示も，ここではなくnext_question_disp2()内でする
+            //next_question_disp(chosen_answer);
+            next_question_disp2(chosen_answer);//選択肢消去でなく，書き換え版
+
+            let time = getNowTime();
+            let expLogData = { Time: time, Word: chosen_answer, Model: chosen_model, candidates: candidates };
+            console.log(expLogData);
+            socket.emit('log', { value: expLogData, name: THIS_NAME });
+
+            //let logArea = document.getElementById("shiritoriLogs");
+            //let newEl = document.createElement('div');
+            //newEl.textContent = '→ ' + chosen_answer;
+            //logArea.append(newEl);
+        }
+
+        document.getElementById('question').addEventListener('click', function (e) {
+            let target = event.target || event.srcElement;
+            if (target.id == 'answer_button') {
+                let chosen_answer = document.getElementById('answer_radios').model_answer.value;
+                console.log('answer_button, chosen_answer: ' + chosen_answer);
+                //RadioNodeListを送るchosen_answer.valueで選択肢が取れる
+                let candidates = []
+                for (let i = 0; i < document.getElementById('answer_radios').model_answer.length; i++) {
+                    //console.log(document.getElementById('answer_radios').model_answer[i].defaultValue);
+                    candidates.push(document.getElementById('answer_radios').model_answer[i].defaultValue);
+                }
+                console.log('candidate: ' + candidates);
+
+                choose_answer(chosen_answer, candidates);
+                target.disabled = true;
+            }
+        })
+
+        function answers_count_disp() {
+            document.getElementById('results').innerHTML = '';
+
+            let results_element = document.getElementById('results');
+            //let insertHTML =`<h3>進捗：${question_counter}/${num_questions}</h3><h3>ラウンド：${rounds_counter}/${num_rounds}</h3>`;
+            let t = Math.round((end_time - start_time) / 60000);
+            let insertHTML = `<h3>${t}分経過<h3>`;
+
+            results_element.insertAdjacentHTML('beforeend', insertHTML);
+            question_counter += 1;
+        }
+
+        //旧版の関数があった，wc_systemあたりの過去のファイル参照，回答数が一定数を超えたらモデルを入れ替えるなどの実装があった
+        //function next_question_disp(chosen_answer){}
+        function next_question_disp2(chosen_answer) {//消去でなく内容の書き換え版
+            //モデル痴漢などの大量のコメントを削除，wc_systemなどを参照
+            //今回の実験は時間で管理する
+            end_time = new Date().getTime();
+            console.log("start_time: " + start_time);
+            console.log("end_time:" + end_time);
+            answers_count_disp();
+            if (end_time - start_time > exp_time) {
+                //最後の単語発話，終了処理
+                utter_word(chosen_answer);
+                //document.getElementById('answer_radios').innerHTML = '';
+                complete_shiritori();
+            } else {
+                clear_radios();
+                //continue_shiritori2();
+                socket.emit('next', { value: chosen_answer, name: THIS_NAME });
+            }
+        }
+
+        function getNowTime() {
+            let nowTime = new Date();
+            let nowHour = nowTime.getHours();
+            let nowMin = nowTime.getMinutes();
+            let nowSec = nowTime.getSeconds();
+            let nowMs = nowTime.getMilliseconds();
+            let time = nowHour + ":" + nowMin + ":" + nowSec + "." + nowMs;
+            return time;
+        }
+
+        function clear_radios() {
+            for (let m in models) {
+                if (document.getElementById(`${m}_answer`) != null) {
+                    let ans = document.getElementById(`${m}_answer`);
+                    ans.value = "";
+                    ans.checked = false;
+                    ans.disabled = true;
+                    //let lab = document.getElementById(`${m}_answer_label`);
+                    let lab = findLableForControl(ans);
+                    lab.textContent = '考え中';
+                }
+            }
+        }
+
+        function disable_buttons_when_end() {
+            //スピーカーも押せないようにしたいがidを都度変えているので面倒そう．
+            //speaker_icon.disabled = true;
+            //答えるボタンを押せないように
+            let ans_btn = document.getElementById("answer_button");
+            ans_btn.disabled = true;
+            //選択肢を押せないように
+            for (let m in models) {
+                if (document.getElementById(`${m}_answer`) != null) {
+                    let ans = document.getElementById(`${m}_answer`);
+                    ans.value = "";
+                    ans.checked = false;
+                    ans.disabled = true;
+                }
+            }
+        }
+
+        //複数ラウンドしりとりをやる場合の関数があった．wc_sytem参照
+        //function continue_shiritori() {}
+        //function continue_shiritori2() {}
+
+        function complete_shiritori() {
+            //ロボットの色確認のために消さない
+            //document.getElementById('question').remove();
+            //document.getElementById('answers').remove();
+            //答えるボタンや選択肢は押せないようにする
+            disable_buttons_when_end();
+
+            let title_element = document.getElementById("title_area");
+            // for experiment1
+            //let insertHTML2title = `
+            //    <p>これで実験条件1は終了です．以下のリンクから中間アンケートにご回答ください．<br>
+            //        アンケートは別タブで開きます．<span style="color:red">このページを確認できるよう</span>にしたまま移動してください．<br>
+            //        アンケート内でロボットの色が必要になります．回答完了までこのタブは残したままにしてください．アンケート回答後はこのタブを閉じて構いません．<p>
+            //        <h2><a href="http://133.70.173.112/node2/wc-online-terminal/interval" onclick="window.onbeforeunload = null;"  target="_blank" rel="noopener noreferrer">中間アンケートページへ</a></h2>`
+            
+            //for experiment2   
+            let insertHTML2title = `
+                <p>これで実験は終了です．以下のリンクから事後アンケートにご回答ください．<br>
+                    アンケートは別タブで開きます．<span style="color:red">このページを確認できるよう</span>にしたまま移動してください．<br>
+                    アンケート内でロボットの色が必要になります．回答完了までこのタブは残したままにしてください．アンケート回答後はこのタブを閉じて構いません．<p>
+                    <h2><a href="http://133.70.173.112/node2/wc-online-terminal/end" onclick="window.onbeforeunload = null;"  target="_blank" rel="noopener noreferrer">事後アンケートページへ</a></h2>`
+
+            title_element.insertAdjacentHTML('beforeend', insertHTML2title);
+
+            let results_element = document.getElementById('results');
+            let max = 0;
+            Object.keys(models).forEach(key => models[key] >= max ? max = models[key] : max);
+            let most_chosen_models = Object.keys(models).filter((key) => { return models[key] === max });
+            let insertHTML2results = `<h3>完了！一番たくさん選んだのは${model_color[most_chosen_models]}色のロボットでした！</h3>`;
+            results_element.insertAdjacentHTML('beforeend', insertHTML2results);
+        }
+
+        function word_disp(word, model) { //ボタンは新たに生成するのではなく，valueを書き換えるようにしたい＝モデルは一貫している．モデルが交代するときに削除＋追加
+            console.log('add_word: ' + word + " by " + model)
+            let ans_element = document.getElementById('answer_radios');
+            //ここで置き換えるのではなく値を書き換える．消すのは別の部分（モデル交代）で記述する
+            //let insertHTML = `
+            //<div>
+            //  <img src='/img/1.png' width='100' height='100'>
+            //  <input type='radio' id='${model}_answer' name='model_answer' value='${word},${model}'/> 
+            //  <label for='${model}_answer' class='label' style="display:block;">・・・</label>
+            //</div>`;
+            let insertHTML = `
+                <div class="balloon">
+                    <div class="faceicon" id='${model}_faceicon'>
+                        <img src='/node2/wc-online-test/img/1.png' width='100' height='100'>
+                    </div>
+                    <div class="answer_candidate">
+                        <div class="answer_contents" id='${model}_answer_contents'>
+                            <input type='radio' id='${model}_answer' name='model_answer' value='${word},${model}'/> 
+                            <label for='${model}_answer' class='label' style="display:block;">・・・</label>
+                        </div>
+                    </div>
+                </div>
+                `;
+            ans_element.insertAdjacentHTML('beforeend', insertHTML)
+            utter_word(word);
+        }
+
+        function findLableForControl(el) {
+            var idVal = el.id;
+            labels = document.getElementsByTagName('label');
+            for (var i = 0; i < labels.length; i++) {
+                if (labels[i].htmlFor == idVal)
+                    return labels[i];
+            }
+        }
+
+        function assign_candidate(word, model) {
+            console.log('assign_word: ' + word + ' by ' + model)
+            if (document.getElementById(`${model}_answer`) != null) {
+                let ans_element = document.getElementById(`${model}_answer`);
+                //let label_element = document.getElementById(`${model}_answer_label`);
+                let label_element = findLableForControl(ans_element);
+                label_element.textContent = '・・・';
+
+                ans_element.value = `${word},${model}`;
+                ans_element.disabled = false;
+            } else { //ここは多分もう使わない，candidate_initで指定しているため
+                let label_element = document.getElementById(`${assign_counter}_answer_label`);
+                label_element.htmlFor = `${model}_answer`;
+                label_element.id = `${model}_answer_label`;
+                label_element.textContent = '・・・'
+
+                let faceicon_element = document.getElementById(`${assign_counter}_faceicon`);
+                faceicon_element.id = `${model}_faceicon`;
+
+                let ansCont_element = document.getElementById(`${assign_counter}_answer_contents`);
+                ansCont_element.id = `${model}_answer_contents`;
+
+                let ans_element = document.getElementById(`${assign_counter}_answer`);
+                ans_element.id = `${model}_answer`;
+                ans_element.value = `${word},${model}`;
+                ans_element.disabled = false;
+
+                assign_counter += 1;
+            }
+            //utter_word(word)
+        }
+
+        function utter_word(word) { //Google TTS APIに置き換える
+            socket.emit('utter', word);
+            console.log('utter: ' + word)
+            //let speak = new SpeechSynthesisUtterance();
+            //speak.text = word;
+            //speak.rate  = 1;     // 読み上げ速度 0.1-10 初期値:1 (倍速なら2, 半分の倍速なら0.5, )
+            //speak.pitch = 1;       // 声の高さ 0-2 初期値:1(0で女性の声) 
+            //speak.lang  = 'ja-JP'; //(日本語:ja-JP, アメリカ英語:en-US, イギリス英語:en-GB, 中国語:zh-CN, 韓国語:ko-KR)
+            //
+            //sleep(200);
+            //speechSynthesis.speak(speak);
+        }
+        function sleep(time) {
+            let date_1 = new Date().getTime();
+            let date_2 = new Date().getTime();
+            while (date_2 < date_1 + time) {
+                date_2 = new Date().getTime();
+            }
+            return;
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const div = document.getElementById('answers');
+            div.addEventListener('change', e => {
+                if (e.target.type !== 'radio') return;
+                console.log(`click:name[${e.target.name}] value[${e.target.value}]`);
+                let word = e.target.value.split(',')[0]
+                utter_word(word)
+                let a_button = document.getElementById('answer_button');
+                a_button.disabled = false;
+            });
+        });
+        // リロードや閉じる操作に対して警告
+        //この機能一時停止2023/11/08
+        //window.onbeforeunload = (e) => {
+        //    e.preventDefault();// Cancel the event as stated by the standard.
+        //    e.returnValue = '';// Chrome requires returnValue to be set.
+        //    //socket.disconnect();
+        //}
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,19 @@
+*.fasl
+actr/environment/GUI/init/05-current-net.tcl
+actr/support/load-mode.lisp
+actr/support/require-mode.lisp
+actr/support/extra-mode.lisp
+actr/environment/GUI/error.log
+actr/environment/GUI/init/10-userguisettings.tcl
+<<<<<<< HEAD
+<<<<<<< HEAD
+actr/examples/connections/nodejs/node_modules
+ref/*
+=======
+actr/examples/connections/nodejs/node_modules
+>>>>>>> 1fc4497003ada21c6e853e8176340ca74464f1ce
+=======
+actr/examples/connections/nodejs/node_modules
+actr/ref/*
+>>>>>>> test
+log/*
